@@ -1,3 +1,16 @@
+vim.o.tabstop = 4
+vim.o.shiftwidth = 4
+vim.o.softtabstop = 4
+vim.o.expandtab = false
+vim.api.nvim_create_autocmd('FileType', {
+    pattern = 'go',
+    callback = function()
+        vim.o.tabstop = 4
+        vim.o.shiftwidth = 4
+        vim.o.softtabstop = 4
+        vim.o.expandtab = false
+    end,
+})
 vim.g.mapleader = ' '
 vim.g.maplocalleader = ' '
 vim.g.have_nerd_font = true
@@ -22,6 +35,8 @@ vim.opt.cursorline = true
 vim.opt.scrolloff = 10
 vim.opt.hlsearch = true
 vim.keymap.set('n', '<Esc>', '<cmd>nohlsearch<CR>')
+vim.keymap.set('n', '<Tab>', ':bnext<CR>', { noremap = true, silent = true, desc = 'Go to next buffer' })
+vim.keymap.set('n', '<S-Tab>', ':bprevious<CR>', { noremap = true, silent = true, desc = 'Go to previous buffer' })
 
 vim.keymap.set('n', '[d', vim.diagnostic.goto_prev, { desc = 'Go to previous [D]iagnostic message' })
 vim.keymap.set('n', ']d', vim.diagnostic.goto_next, { desc = 'Go to next [D]iagnostic message' })
@@ -34,8 +49,8 @@ vim.keymap.set('n', '<C-h>', '<C-w><C-h>', { desc = 'Move focus to the left wind
 vim.keymap.set('n', '<C-l>', '<C-w><C-l>', { desc = 'Move focus to the right window' })
 vim.keymap.set('n', '<C-j>', '<C-w><C-j>', { desc = 'Move focus to the lower window' })
 vim.keymap.set('n', '<C-k>', '<C-w><C-k>', { desc = 'Move focus to the upper window' })
-vim.keymap.set('n', '<C-w>', ':bd<cr>', { desc = 'Close current buffer' })
-vim.keymap.set('n', '<leader>e', ':Oil<cr>', { desc = 'Open file explorer' })
+vim.keymap.set('n', '<C-w>', ':bd<cr>', { noremap = true, silent = true, desc = 'Close current buffer' })
+vim.keymap.set('n', '<leader>e', ':Oil<cr>', { noremap = true, silent = true, desc = 'Open file explorer' })
 
 vim.keymap.set('v', '<A-Up>', ":m '<-2<CR>gv=gv", { noremap = true, silent = true, desc = 'Move selection up' })
 vim.keymap.set('v', '<A-Down>', ":m '>+1<CR>gv=gv", { noremap = true, silent = true, desc = 'Move selection down' })
@@ -168,7 +183,22 @@ require('lazy').setup({
             { 'folke/neodev.nvim', opts = {} },
         },
         config = function()
-            require('lspconfig').gleam.setup {}
+            local lsp = require 'lspconfig'
+            local util = require 'lspconfig/util'
+            lsp.gleam.setup {}
+            lsp.gopls.setup {
+                filetypes = { 'go', 'gomod', 'gowork', 'gotmpl' },
+                root_dir = util.root_pattern('go.work', 'go.mod', '.git'),
+                settings = {
+                    gopls = {
+                        completeUnimported = true,
+                        usePlaceholders = true,
+                        analyses = {
+                            unusedparams = true,
+                        },
+                    },
+                },
+            }
             vim.api.nvim_create_autocmd('LspAttach', {
                 group = vim.api.nvim_create_augroup('kickstart-lsp-attach', { clear = true }),
                 callback = function(event)
@@ -223,7 +253,6 @@ require('lazy').setup({
             capabilities = vim.tbl_deep_extend('force', capabilities, require('cmp_nvim_lsp').default_capabilities())
 
             local servers = {
-                gopls = {},
                 pyright = {},
                 rust_analyzer = {},
                 tsserver = {},
