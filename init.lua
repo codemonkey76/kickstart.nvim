@@ -89,6 +89,53 @@ require('lazy').setup({
         },
     },
     {
+        'adalessa/laravel.nvim',
+        dependencies = {
+            'rcarriga/nvim-notify',
+            'nvim-telescope/telescope.nvim',
+            'MunifTanjim/nui.nvim',
+        },
+        cmd = { 'Sail', 'Artisan', 'Composer', 'Npm', 'Laravel', 'LaravelInfo', 'DockerCompose' },
+        keys = {
+            { '<leader>la', ':Laravel artisan<cr>', desc = 'Laravel Application Commands' },
+            { '<leader>lr', ':Laravel routes<cr>', desc = 'Laravel Application Routes' },
+            {
+                '<leader>lt',
+                function()
+                    require('laravel.tinker').send_to_tinker()
+                end,
+                mode = 'v',
+                desc = 'Laravel Tinker',
+            },
+        },
+        init = function()
+            vim.g.laravel_log_level = 'debug'
+        end,
+        config = function()
+            local uid = vim.system({ 'id', '-u' }, { text = true }):wait().stdout or '1000'
+            local gid = vim.system({ 'id', '-g' }, { text = true }):wait().stdout or '1000'
+
+            local user_arg = string.format('%s:%s', vim.trim(uid), vim.trim(gid))
+
+            require('laravel').setup {
+                route_info = {
+                    position = 'top',
+                },
+            }
+            require('telescope').load_extension 'laravel'
+        end,
+    },
+    {
+        'rcarriga/nvim-notify',
+        config = function()
+            local notify = require 'notify'
+            -- this for transparency
+            notify.setup { background_colour = '#000000' }
+            -- this overwrites the vim notify function
+            vim.notify = notify.notify
+        end,
+    },
+    {
         'folke/which-key.nvim',
         event = 'VimEnter',
         config = function()
@@ -185,7 +232,13 @@ require('lazy').setup({
         config = function()
             local lsp = require 'lspconfig'
             local util = require 'lspconfig/util'
-            lsp.gleam.setup {}
+            lsp.gleam.setup {
+                settings = {
+                    inlayHints = {
+                        pipelines = true,
+                    },
+                },
+            }
             lsp.gopls.setup {
                 filetypes = { 'go', 'gomod', 'gowork', 'gotmpl' },
                 root_dir = util.root_pattern('go.work', 'go.mod', '.git'),
@@ -199,6 +252,7 @@ require('lazy').setup({
                     },
                 },
             }
+            lsp.intelephense.setup {}
             vim.api.nvim_create_autocmd('LspAttach', {
                 group = vim.api.nvim_create_augroup('kickstart-lsp-attach', { clear = true }),
                 callback = function(event)
@@ -403,7 +457,6 @@ require('lazy').setup({
         config = function()
             require('mini.ai').setup { n_lines = 500 }
             require('mini.surround').setup()
-            require('mini.animate').setup()
             local statusline = require 'mini.statusline'
             statusline.setup { use_icons = vim.g.have_nerd_font }
 
@@ -429,6 +482,15 @@ require('lazy').setup({
             indent = { enable = true, disable = { 'ruby' } },
         },
         config = function(_, opts)
+            local parser_config = require('nvim-treesitter.parsers').get_parser_configs()
+            parser_config.blade = {
+                install_info = {
+                    url = 'https://github.com/EmranMR/tree-sitter-blade',
+                    files = { 'src/parser.c' },
+                    branch = 'main',
+                },
+                filetype = 'blade',
+            }
             require('nvim-treesitter.install').prefer_git = true
             ---@diagnostic disable-next-line: missing-fields
             require('nvim-treesitter.configs').setup(opts)
